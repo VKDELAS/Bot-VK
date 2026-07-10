@@ -1,4 +1,16 @@
-const { EmbedBuilder } = require('discord.js');
+const {
+  EmbedBuilder,
+  ContainerBuilder,
+  SectionBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
+  ThumbnailBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} = require('discord.js');
 const ids = require('../../lib/ids');
 
 module.exports = {
@@ -73,6 +85,57 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
       console.log(`[BOT] ${member.user.tag} verificou-se com sucesso`);
+
+      const logChannel = interaction.guild.channels.cache.get(ids.canais.logs);
+      if (logChannel) {
+        const logContainer = new ContainerBuilder().setAccentColor(0x57F287);
+
+        logContainer.addSectionComponents(
+          new SectionBuilder().addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              '## Verificação Realizada'
+            )
+          ).setThumbnailAccessory(
+            new ThumbnailBuilder().setURL(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+          )
+        );
+
+        logContainer.addSeparatorComponents(
+          new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+        );
+
+        logContainer.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `> **Usuário:** ${member} (${member.user.tag})\n` +
+            `> **ID:** \`${member.id}\`\n` +
+            `> **Cargos adicionados:** ${rolesToAdd.filter(Boolean).map(r => r.toString()).join(', ')}`
+          )
+        );
+
+        logContainer.addSeparatorComponents(
+          new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+        );
+
+        logContainer.addActionRowComponents(
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setLabel('Perfil')
+              .setURL(`https://discord.com/users/${member.id}`)
+              .setStyle(ButtonStyle.Link)
+          )
+        );
+
+        logContainer.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `-# ${interaction.guild.name} · verificação registrada automaticamente`
+          )
+        );
+
+        await logChannel.send({
+          components: [logContainer],
+          flags: MessageFlags.IsComponentsV2,
+        });
+      }
     } catch (error) {
       console.error('[BOT] Erro na verificação:', error);
         const embed = new EmbedBuilder()
