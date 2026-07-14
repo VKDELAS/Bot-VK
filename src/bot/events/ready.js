@@ -2,7 +2,7 @@ const ids = require('../../lib/ids');
 const { setupPainel } = require('../utils/sendPainel');
 
 module.exports = {
-  name: 'clientReady',
+  name: 'ready',
   once: true,
   async execute(client) {
     console.log(`[BOT] Logado como ${client.user.tag}`);
