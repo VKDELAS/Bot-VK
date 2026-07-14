@@ -42,6 +42,7 @@ DISCORD_CLIENT_ID=seu_client_id_aqui
 DISCORD_GUILD_ID=id_do_servidor
 TWITCH_CLIENT_ID=seu_twitch_client_id
 TWITCH_CLIENT_SECRET=seu_twitch_client_secret
+YOUTUBE_API_KEY=sua_youtube_api_key_v3
 ```
 
 ## Comandos

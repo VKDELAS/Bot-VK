@@ -5,7 +5,7 @@ const ids = require('../../lib/ids');
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 
 const CHANNEL_ID = 'UC3Bkdcwe1IwiZrg9CBB76OQ';
-const RSS_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
+const API_BASE = 'https://www.googleapis.com/youtube/v3';
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-state.json');
 
 function loadState() {
@@ -27,50 +27,42 @@ function saveState(state) {
   }
 }
 
-function extractVideoId(entry) {
-  const match = entry.match(/yt:videoId>([^<]+)/);
-  return match ? match[1] : null;
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
 }
 
-function extractTitle(entry) {
-  const match = entry.match(/<media:title[^>]*>([^<]+)<\/media:title>/);
-  return match ? match[1] : 'Sem título';
+async function getLatestVideo() {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const url = `${API_BASE}/search?key=${apiKey}&channelId=${CHANNEL_ID}&part=snippet&type=video&order=date&maxResults=1`;
+  const data = await fetchJson(url);
+  if (!data.items || data.items.length === 0) return null;
+  const item = data.items[0];
+  return {
+    videoId: item.id.videoId,
+    title: item.snippet.title,
+    thumbnailUrl: `https://i.ytimg.com/vi/${item.id.videoId}/maxresdefault.jpg`,
+  };
 }
 
-function extractThumbnail(entry) {
-  const match = entry.match(/<media:thumbnail[^>]*url="([^"]+)"/);
-  return match ? match[1] : null;
-}
-
-function extractChannelAvatar(feed) {
-  const match = feed.match(/<media:thumbnail[^>]*url="([^"]+)"/);
-  return match ? match[1] : null;
+async function getChannelAvatar() {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const url = `${API_BASE}/channels?key=${apiKey}&id=${CHANNEL_ID}&part=snippet`;
+  const data = await fetchJson(url);
+  if (!data.items || data.items.length === 0) return null;
+  return data.items[0].snippet.thumbnails.default.url;
 }
 
 async function checkYouTube(client) {
   try {
-    const response = await fetch(RSS_URL);
-    if (!response.ok) {
-      console.error('[BOT] YouTube RSS retornou status:', response.status);
-      return;
-    }
-
-    const feed = await response.text();
-    const entries = feed.split('<entry>').slice(1);
-
-    if (entries.length === 0) return;
-
-    const latestEntry = entries[0];
-    const videoId = extractVideoId(latestEntry);
-
-    if (!videoId) return;
+    const video = await getLatestVideo();
+    if (!video) return;
 
     const state = loadState();
-    if (state.lastVideoId === videoId) return;
+    if (state.lastVideoId === video.videoId) return;
 
-    const title = extractTitle(latestEntry);
-    const thumbnail = extractThumbnail(latestEntry);
-    const avatar = extractChannelAvatar(feed);
+    const avatar = await getChannelAvatar();
 
     const guild = client.guilds.cache.get(ids.guildId);
     if (!guild) return;
@@ -79,9 +71,9 @@ async function checkYouTube(client) {
     if (!channel) return;
 
     const container = buildVideoNotifyContainer({
-      videoTitle: title,
-      videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-      videoThumbnailUrl: thumbnail || `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+      videoTitle: video.title,
+      videoUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+      videoThumbnailUrl: video.thumbnailUrl,
       channelAvatarUrl: avatar || 'https://i.ytimg.com/vi/default.jpg',
     });
 
@@ -90,8 +82,8 @@ async function checkYouTube(client) {
       components: [container],
     });
 
-    console.log(`[BOT] Notificação de vídeo enviada: ${title}`);
-    saveState({ lastVideoId: videoId });
+    console.log(`[BOT] Notificação de vídeo enviada: ${video.title}`);
+    saveState({ lastVideoId: video.videoId });
   } catch (error) {
     console.error('[BOT] Erro ao verificar YouTube:', error);
   }
