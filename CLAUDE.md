@@ -12,8 +12,13 @@ src/
 │   ├── events/
 │   │   ├── interactionCreate.js  # Handler de botões e comandos
 │   │   └── ready.js             # Evento de inicialização
+│   ├── services/
+│   │   ├── youtube-monitor.js   # Monitor de vídeos novos YouTube
+│   │   └── twitch-monitor.js    # Monitor de lives Twitch
 │   ├── utils/
-│   │   └── sendPainel.js     # Lógica do painel de verificação
+│   │   ├── sendPainel.js        # Lógica do painel de verificação
+│   │   ├── video-notify-container.js  # Container notificação YouTube
+│   │   └── live-notify-container.js   # Container notificação Twitch
 │   ├── client.js             # Configuração do cliente Discord
 │   └── index.js              # Entry point do bot
 └── lib/
@@ -35,6 +40,8 @@ Criar arquivo `.env` na raiz:
 DISCORD_TOKEN=seu_token_aqui
 DISCORD_CLIENT_ID=seu_client_id_aqui
 DISCORD_GUILD_ID=id_do_servidor
+TWITCH_CLIENT_ID=seu_twitch_client_id
+TWITCH_CLIENT_SECRET=seu_twitch_client_secret
 ```
 
 ## Comandos
@@ -48,6 +55,9 @@ DISCORD_GUILD_ID=id_do_servidor
 - Remove cargo Não Inscrito após verificação
 - Logs de verificação em canal específico
 - Armazenamento de ID da mensagem em `data/verification.json`
+- Monitor de vídeos novos YouTube (polling RSS a cada 3 min)
+- Monitor de lives Twitch (polling Helix API a cada 90s)
+- Notificações via Components V2 (nunca embeds)
 
 ## Rodar
 

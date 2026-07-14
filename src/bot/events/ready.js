@@ -1,5 +1,7 @@
 const ids = require('../../lib/ids');
 const { setupPainel } = require('../utils/sendPainel');
+const { startYoutubeMonitor } = require('../services/youtube-monitor');
+const { startTwitchMonitor } = require('../services/twitch-monitor');
 
 module.exports = {
   name: 'ready',
@@ -19,5 +21,8 @@ module.exports = {
     } catch (error) {
       console.error('[BOT] Erro ao configurar painel:', error.message);
     }
+
+    startYoutubeMonitor(client);
+    startTwitchMonitor(client);
   },
 };

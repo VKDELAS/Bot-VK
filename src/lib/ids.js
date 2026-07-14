@@ -3,6 +3,8 @@ module.exports = {
   canais: {
     verificacao: '1062512407710281878',
     logs: '1062512395102212106',
+    videoNotify: '1062763623556055080',
+    liveNotify: '1062763577846530088',
   },
   cargos: {
     admin: '1062512326324011138',
