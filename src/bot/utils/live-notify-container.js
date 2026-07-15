@@ -15,7 +15,7 @@ const {
 const PLATFORM_CONFIG = {
   twitch: {
     accentColor: 0x9146ff,
-    label: '@everyone\n🔴 **AO VIVO AGORA!**',
+    label: '🔴 **AO VIVO AGORA!**',
     footer: '-# VK_DELAAS na Twitch • ao vivo agora',
     buttonLabel: 'Assistir na Twitch',
     buttonUrl: 'https://www.twitch.tv/vk_delaass',
@@ -23,7 +23,7 @@ const PLATFORM_CONFIG = {
   },
   youtube: {
     accentColor: 0xff0000,
-    label: '@everyone\n🔴 **AO VIVO NO YOUTUBE!**',
+    label: '🔴 **AO VIVO NO YOUTUBE!**',
     footer: '-# VK DELAS no YouTube • ao vivo agora',
     buttonLabel: 'Assistir no YouTube',
     buttonUrl: null,
@@ -47,7 +47,7 @@ function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, a
       new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `## ${streamTitle}\nJogando **${gameName}** — bora dar aquela força na live! 🎮`,
+            `## ${streamTitle}\nJogando **${gameName}** — bora dar aquela força na live! 🎮\n\n@everyone`,
           ),
         )
         .setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl)),

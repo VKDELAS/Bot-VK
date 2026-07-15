@@ -62,12 +62,22 @@ async function getLatestLive() {
 }
 
 async function getChannelAvatar() {
+  try {
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
+    const response = await fetch(rssUrl);
+    if (!response.ok) return null;
+    const text = await response.text();
+    const match = text.match(/<media:thumbnail[^>]*url="([^"]+)"/);
+    if (match) return match[1];
+  } catch (_) {}
+
   const apiKey = process.env.YOUTUBE_API_KEY;
   const url = `${API_BASE}/channels?key=${apiKey}&id=${CHANNEL_ID}&part=snippet`;
   const data = await fetchJson(url);
   if (!data.items || data.items.length === 0) return null;
   const thumbs = data.items[0].snippet.thumbnails;
-  return (thumbs.medium || thumbs.high || thumbs.default || {}).url || null;
+  const thumb = thumbs.maxres || thumbs.high || thumbs.medium || thumbs.default;
+  return thumb ? thumb.url : null;
 }
 
 async function checkYouTube(client) {
