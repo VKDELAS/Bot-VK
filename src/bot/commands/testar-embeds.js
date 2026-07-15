@@ -30,7 +30,7 @@ module.exports = {
           videoTitle: 'TESTE — Como criar um bot no Discord',
           videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
           videoThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          channelAvatarUrl: 'https://yt3.googleusercontent.com/ytc/AIdro_kTest123=s176-c-k-c0x00ffffff-no-rj',
+          channelAvatarUrl: 'https://yt3.ggpht.com/ytc/AIdro_kVKDELASavatar=s160-c-k-c0x00ffffff-no-rj',
         });
 
         await interaction.channel.send({
@@ -59,7 +59,7 @@ module.exports = {
           streamTitle: 'TESTE — Live no YouTube',
           gameName: 'YouTube Live',
           streamThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          avatarUrl: 'https://yt3.googleusercontent.com/ytc/AIdro_kTest123=s176-c-k-c0x00ffffff-no-rj',
+          avatarUrl: 'https://yt3.ggpht.com/ytc/AIdro_kVKDELASavatar=s160-c-k-c0x00ffffff-no-rj',
           platform: 'youtube',
           videoId: 'dQw4w9WgXcQ',
         });

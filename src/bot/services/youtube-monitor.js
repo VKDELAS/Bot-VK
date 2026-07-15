@@ -66,7 +66,8 @@ async function getChannelAvatar() {
   const url = `${API_BASE}/channels?key=${apiKey}&id=${CHANNEL_ID}&part=snippet`;
   const data = await fetchJson(url);
   if (!data.items || data.items.length === 0) return null;
-  return data.items[0].snippet.thumbnails.default.url;
+  const thumbs = data.items[0].snippet.thumbnails;
+  return (thumbs.medium || thumbs.high || thumbs.default || {}).url || null;
 }
 
 async function checkYouTube(client) {

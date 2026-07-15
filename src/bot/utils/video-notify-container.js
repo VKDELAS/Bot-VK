@@ -16,7 +16,7 @@ function buildVideoNotifyContainer({ videoTitle, videoUrl, videoThumbnailUrl, ch
   return new ContainerBuilder()
     .setAccentColor(0xff0000)
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('📹 **Vídeo novo no ar!**'),
+      new TextDisplayBuilder().setContent('@everyone\n📹 **Vídeo novo no ar!**'),
     )
     .addSectionComponents(
       new SectionBuilder()

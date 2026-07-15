@@ -15,7 +15,7 @@ const {
 const PLATFORM_CONFIG = {
   twitch: {
     accentColor: 0x9146ff,
-    label: '🔴 **AO VIVO AGORA!**',
+    label: '@everyone\n🔴 **AO VIVO AGORA!**',
     footer: '-# VK_DELAAS na Twitch • ao vivo agora',
     buttonLabel: 'Assistir na Twitch',
     buttonUrl: 'https://www.twitch.tv/vk_delaass',
@@ -23,7 +23,7 @@ const PLATFORM_CONFIG = {
   },
   youtube: {
     accentColor: 0xff0000,
-    label: '🔴 **AO VIVO NO YOUTUBE!**',
+    label: '@everyone\n🔴 **AO VIVO NO YOUTUBE!**',
     footer: '-# VK DELAS no YouTube • ao vivo agora',
     buttonLabel: 'Assistir no YouTube',
     buttonUrl: null,
