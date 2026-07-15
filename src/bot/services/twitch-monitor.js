@@ -93,7 +93,8 @@ async function checkTwitch(client) {
           streamTitle: stream.title || 'Live sem título',
           gameName: stream.game_name || 'Sem categoria',
           streamThumbnailUrl: thumbnailUrl,
-          twitchAvatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          platform: 'twitch',
         });
 
         await channel.send({

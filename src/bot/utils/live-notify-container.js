@@ -12,11 +12,36 @@ const {
   ButtonStyle,
 } = require('discord.js');
 
-function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, twitchAvatarUrl }) {
+const PLATFORM_CONFIG = {
+  twitch: {
+    accentColor: 0x9146ff,
+    label: '🔴 **AO VIVO AGORA!**',
+    footer: '-# VK_DELAAS na Twitch • ao vivo agora',
+    buttonLabel: 'Assistir na Twitch',
+    buttonUrl: 'https://www.twitch.tv/vk_delaass',
+    buttonEmoji: '🟣',
+  },
+  youtube: {
+    accentColor: 0xff0000,
+    label: '🔴 **AO VIVO NO YOUTUBE!**',
+    footer: '-# VK DELAS no YouTube • ao vivo agora',
+    buttonLabel: 'Assistir no YouTube',
+    buttonUrl: null,
+    buttonEmoji: '▶️',
+  },
+};
+
+function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, avatarUrl, platform = 'twitch', videoId }) {
+  const config = PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.twitch;
+
+  const buttonUrl = platform === 'youtube' && videoId
+    ? `https://www.youtube.com/watch?v=${videoId}`
+    : config.buttonUrl;
+
   return new ContainerBuilder()
-    .setAccentColor(0x9146ff)
+    .setAccentColor(config.accentColor)
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('🔴 **AO VIVO AGORA!**'),
+      new TextDisplayBuilder().setContent(config.label),
     )
     .addSectionComponents(
       new SectionBuilder()
@@ -25,7 +50,7 @@ function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, t
             `## ${streamTitle}\nJogando **${gameName}** — bora dar aquela força na live! 🎮`,
           ),
         )
-        .setThumbnailAccessory(new ThumbnailBuilder().setURL(twitchAvatarUrl)),
+        .setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl)),
     )
     .addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
@@ -36,15 +61,15 @@ function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, t
       new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large),
     )
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent('-# VK_DELAAS na Twitch • ao vivo agora'),
+      new TextDisplayBuilder().setContent(config.footer),
     )
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel('Assistir na Twitch')
-          .setURL('https://www.twitch.tv/vk_delaass')
-          .setEmoji('🟣'),
+          .setLabel(config.buttonLabel)
+          .setURL(buttonUrl)
+          .setEmoji(config.buttonEmoji),
       ),
     );
 }

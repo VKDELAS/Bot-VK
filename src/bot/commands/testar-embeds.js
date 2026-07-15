@@ -12,7 +12,8 @@ module.exports = {
         .setDescription('Qual embed testar')
         .addChoices(
           { name: 'Vídeo novo (YouTube)', value: 'video' },
-          { name: 'Live (Twitch)', value: 'live' },
+          { name: 'Live (Twitch)', value: 'live-twitch' },
+          { name: 'Live (YouTube)', value: 'live-youtube' },
           { name: 'Ambos', value: 'both' },
         ),
     )
@@ -38,12 +39,29 @@ module.exports = {
         });
       }
 
-      if (tipo === 'live' || tipo === 'both') {
+      if (tipo === 'live-twitch' || tipo === 'both') {
         const liveContainer = buildLiveNotifyContainer({
           streamTitle: 'TESTE — Live chill jogando qualquer coisa',
           gameName: 'Just Chatting',
           streamThumbnailUrl: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_vk_delaass-640x360.jpg',
-          twitchAvatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          platform: 'twitch',
+        });
+
+        await interaction.channel.send({
+          flags: MessageFlags.IsComponentsV2,
+          components: [liveContainer],
+        });
+      }
+
+      if (tipo === 'live-youtube' || tipo === 'both') {
+        const liveContainer = buildLiveNotifyContainer({
+          streamTitle: 'TESTE — Live no YouTube',
+          gameName: 'YouTube Live',
+          streamThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+          avatarUrl: 'https://yt3.googleusercontent.com/ytc/AIdro_kTest123=s176-c-k-c0x00ffffff-no-rj',
+          platform: 'youtube',
+          videoId: 'dQw4w9WgXcQ',
         });
 
         await interaction.channel.send({
