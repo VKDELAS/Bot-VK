@@ -5,6 +5,7 @@ const ids = require('../../lib/ids');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
 const TWITCH_USERNAME = 'vk_delaass';
+const AVATAR_URL = 'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a58c222&is=6a5770a2&hm=a57737de05677601702d4a46dffedd89678df0a1b54c8094a81c42d54f29e2c3&';
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.json');
 const POLL_INTERVAL = 90 * 1000;
 
@@ -93,7 +94,7 @@ async function checkTwitch(client) {
           streamTitle: stream.title || 'Live sem título',
           gameName: stream.game_name || 'Sem categoria',
           streamThumbnailUrl: thumbnailUrl,
-          avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          avatarUrl: AVATAR_URL,
           platform: 'twitch',
         });
 

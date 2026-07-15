@@ -2,6 +2,8 @@ const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('disc
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
+const AVATAR_URL = 'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a58c222&is=6a5770a2&hm=a57737de05677601702d4a46dffedd89678df0a1b54c8094a81c42d54f29e2c3&';
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('testar-embeds')
@@ -30,7 +32,7 @@ module.exports = {
           videoTitle: 'TESTE — Como criar um bot no Discord',
           videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
           videoThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          channelAvatarUrl: 'https://yt3.ggpht.com/ytc/AIdro_kVKDELASavatar=s160-c-k-c0x00ffffff-no-rj',
+          channelAvatarUrl: AVATAR_URL,
         });
 
         await interaction.channel.send({
@@ -44,7 +46,7 @@ module.exports = {
           streamTitle: 'TESTE — Live chill jogando qualquer coisa',
           gameName: 'Just Chatting',
           streamThumbnailUrl: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_vk_delaass-640x360.jpg',
-          avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/vk_delaass-profile_image-752f5e9e3b2b2a4e-150x150.png',
+          avatarUrl: AVATAR_URL,
           platform: 'twitch',
         });
 
@@ -59,7 +61,7 @@ module.exports = {
           streamTitle: 'TESTE — Live no YouTube',
           gameName: 'YouTube Live',
           streamThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          avatarUrl: 'https://yt3.ggpht.com/ytc/AIdro_kVKDELASavatar=s160-c-k-c0x00ffffff-no-rj',
+          avatarUrl: AVATAR_URL,
           platform: 'youtube',
           videoId: 'dQw4w9WgXcQ',
         });

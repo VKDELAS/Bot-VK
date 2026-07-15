@@ -7,6 +7,7 @@ const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
 const CHANNEL_ID = 'UC3Bkdcwe1IwiZrg9CBB76OQ';
 const API_BASE = 'https://www.googleapis.com/youtube/v3';
+const AVATAR_URL = 'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a58c222&is=6a5770a2&hm=a57737de05677601702d4a46dffedd89678df0a1b54c8094a81c42d54f29e2c3&';
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-state.json');
 const LIVE_STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-live-state.json');
 
@@ -61,25 +62,6 @@ async function getLatestLive() {
   };
 }
 
-async function getChannelAvatar() {
-  try {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
-    const response = await fetch(rssUrl);
-    if (!response.ok) return null;
-    const text = await response.text();
-    const match = text.match(/<media:thumbnail[^>]*url="([^"]+)"/);
-    if (match) return match[1];
-  } catch (_) {}
-
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  const url = `${API_BASE}/channels?key=${apiKey}&id=${CHANNEL_ID}&part=snippet`;
-  const data = await fetchJson(url);
-  if (!data.items || data.items.length === 0) return null;
-  const thumbs = data.items[0].snippet.thumbnails;
-  const thumb = thumbs.maxres || thumbs.high || thumbs.medium || thumbs.default;
-  return thumb ? thumb.url : null;
-}
-
 async function checkYouTube(client) {
   try {
     const video = await getLatestVideo();
@@ -87,8 +69,6 @@ async function checkYouTube(client) {
 
     const state = loadState(STATE_PATH);
     if (state.lastVideoId === video.videoId) return;
-
-    const avatar = await getChannelAvatar();
 
     const guild = client.guilds.cache.get(ids.guildId);
     if (!guild) return;
@@ -100,7 +80,7 @@ async function checkYouTube(client) {
       videoTitle: video.title,
       videoUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
       videoThumbnailUrl: video.thumbnailUrl,
-      channelAvatarUrl: avatar || 'https://i.ytimg.com/vi/default.jpg',
+      channelAvatarUrl: AVATAR_URL,
     });
 
     await channel.send({
@@ -123,8 +103,6 @@ async function checkYouTubeLive(client) {
     if (live) {
       if (liveState.lastLiveId === live.videoId) return;
 
-      const avatar = await getChannelAvatar();
-
       const guild = client.guilds.cache.get(ids.guildId);
       if (!guild) return;
 
@@ -135,7 +113,7 @@ async function checkYouTubeLive(client) {
         streamTitle: live.title,
         gameName: 'YouTube Live',
         streamThumbnailUrl: live.thumbnailUrl,
-        avatarUrl: avatar || 'https://i.ytimg.com/vi/default.jpg',
+        avatarUrl: AVATAR_URL,
         platform: 'youtube',
         videoId: live.videoId,
       });
