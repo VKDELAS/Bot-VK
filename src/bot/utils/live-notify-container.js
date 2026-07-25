@@ -15,55 +15,82 @@ const {
 const PLATFORM_CONFIG = {
   twitch: {
     accentColor: 0x9146ff,
-    label: '🔴 **AO VIVO AGORA!**',
-    footer: '-# VK_DELAAS na Twitch • ao vivo agora',
+    badge: '🔴 **AO VIVO NA TWITCH**',
+    footer: '-# VK DELAS na Twitch • Transmissão ao vivo em andamento',
     buttonLabel: 'Assistir na Twitch',
     buttonUrl: 'https://www.twitch.tv/vk_delaass',
     buttonEmoji: '🟣',
   },
   youtube: {
     accentColor: 0xff0000,
-    label: '🔴 **AO VIVO NO YOUTUBE!**',
-    footer: '-# VK DELAS no YouTube • ao vivo agora',
+    badge: '🔴 **AO VIVO NO YOUTUBE**',
+    footer: '-# VK DELAS no YouTube • Transmissão ao vivo em andamento',
     buttonLabel: 'Assistir no YouTube',
     buttonUrl: null,
     buttonEmoji: '▶️',
   },
 };
 
-function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, avatarUrl, platform = 'twitch', videoId }) {
+function buildLiveNotifyContainer({
+  streamTitle,
+  gameName,
+  streamThumbnailUrl,
+  avatarUrl,
+  platform = 'twitch',
+  videoId,
+  twitchUsername = 'vk_delaass',
+}) {
   const config = PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.twitch;
 
-  const buttonUrl = platform === 'youtube' && videoId
-    ? `https://www.youtube.com/watch?v=${videoId}`
-    : config.buttonUrl;
+  let buttonUrl = config.buttonUrl;
+  if (platform === 'twitch') {
+    buttonUrl = `https://www.twitch.tv/${twitchUsername}`;
+  } else if (platform === 'youtube' && videoId) {
+    buttonUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  }
 
-  return new ContainerBuilder()
-    .setAccentColor(config.accentColor)
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(config.label),
-    )
-    .addSectionComponents(
-      new SectionBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(
-            `## ${streamTitle}\nJogando **${gameName}** — bora dar aquela força na live! 🎮\n\n@everyone`,
-          ),
-        )
-        .setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl)),
-    )
-    .addMediaGalleryComponents(
+  const container = new ContainerBuilder().setAccentColor(config.accentColor);
+
+  // Status Badge
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(config.badge),
+  );
+
+  // Informações da Live
+  const section = new SectionBuilder().addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `# ${streamTitle}\n\n` +
+      `🎮 **Categoria:** ${gameName || 'Geral'}\n` +
+      `✨ A live já começou! Venha acompanhar e trocar aquela ideia.\n\n` +
+      `@everyone`,
+    ),
+  );
+
+  if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
+    section.setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl));
+  }
+
+  container.addSectionComponents(section);
+
+  // Thumbnail em Galeria de Mídia
+  if (streamThumbnailUrl && typeof streamThumbnailUrl === 'string' && streamThumbnailUrl.startsWith('http')) {
+    container.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
         new MediaGalleryItemBuilder().setURL(streamThumbnailUrl),
       ),
-    )
-    .addSeparatorComponents(
-      new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large),
-    )
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(config.footer),
-    )
-    .addActionRowComponents(
+    );
+  }
+
+  container.addSeparatorComponents(
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large),
+  );
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(config.footer),
+  );
+
+  if (buttonUrl) {
+    container.addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
@@ -72,6 +99,10 @@ function buildLiveNotifyContainer({ streamTitle, gameName, streamThumbnailUrl, a
           .setEmoji(config.buttonEmoji),
       ),
     );
+  }
+
+  return container;
 }
 
 module.exports = { buildLiveNotifyContainer };
+

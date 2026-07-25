@@ -4,10 +4,12 @@ const path = require('path');
 const ids = require('../../lib/ids');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
-const TWITCH_USERNAME = 'vk_delaass';
-const AVATAR_URL = 'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a58c222&is=6a5770a2&hm=a57737de05677601702d4a46dffedd89678df0a1b54c8094a81c42d54f29e2c3&';
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.json');
 const POLL_INTERVAL = 90 * 1000;
+
+function getTwitchUsername() {
+  return process.env.TWITCH_USERNAME || 'vk_delaass';
+}
 
 function loadState() {
   try {
@@ -17,11 +19,13 @@ function loadState() {
   } catch (error) {
     console.error('[BOT] Erro ao ler twitch-state.json:', error.message);
   }
-  return { isLive: false };
+  return { isLive: false, lastStreamId: null };
 }
 
 function saveState(state) {
   try {
+    const dir = path.dirname(STATE_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
   } catch (error) {
     console.error('[BOT] Erro ao salvar twitch-state.json:', error.message);
@@ -37,6 +41,10 @@ async function getAccessToken() {
   const clientId = process.env.TWITCH_CLIENT_ID;
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 
+  if (!clientId || !clientSecret) {
+    throw new Error('TWITCH_CLIENT_ID ou TWITCH_CLIENT_SECRET não configurados no arquivo .env');
+  }
+
   const response = await fetch('https://id.twitch.tv/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -48,7 +56,7 @@ async function getAccessToken() {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao obter token Twitch: ${response.status}`);
+    throw new Error(`Falha ao obter token Twitch (HTTP ${response.status})`);
   }
 
   const data = await response.json();
@@ -57,12 +65,45 @@ async function getAccessToken() {
   return accessToken;
 }
 
+let cachedAvatarUrl = null;
+let avatarExpiresAt = 0;
+
+async function getTwitchUserAvatar(username, token, clientId) {
+  if (cachedAvatarUrl && Date.now() < avatarExpiresAt) return cachedAvatarUrl;
+  try {
+    const response = await fetch(`https://api.twitch.tv/helix/users?login=${username}`, {
+      headers: {
+        'Client-ID': clientId,
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.data && data.data[0] && data.data[0].profile_image_url) {
+        cachedAvatarUrl = data.data[0].profile_image_url;
+        avatarExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+        return cachedAvatarUrl;
+      }
+    }
+  } catch (error) {
+    console.error('[BOT] Erro ao buscar avatar Twitch:', error.message);
+  }
+  return null;
+}
+
 async function checkTwitch(client) {
+  const username = getTwitchUsername();
+  const clientId = process.env.TWITCH_CLIENT_ID;
+
+  if (!clientId) {
+    console.warn('[BOT] TWITCH_CLIENT_ID ausente no .env. Pulando verificação Twitch.');
+    return;
+  }
+
   try {
     const token = await getAccessToken();
-    const clientId = process.env.TWITCH_CLIENT_ID;
 
-    const response = await fetch(`https://api.twitch.tv/helix/streams?user_login=${TWITCH_USERNAME}`, {
+    const response = await fetch(`https://api.twitch.tv/helix/streams?user_login=${username}`, {
       headers: {
         'Client-ID': clientId,
         'Authorization': `Bearer ${token}`,
@@ -70,7 +111,7 @@ async function checkTwitch(client) {
     });
 
     if (!response.ok) {
-      console.error('[BOT] Twitch API retornou status:', response.status);
+      console.error('[BOT] Twitch API retornou status HTTP:', response.status);
       return;
     }
 
@@ -79,23 +120,32 @@ async function checkTwitch(client) {
     const state = loadState();
 
     if (stream) {
-      if (!state.isLive) {
+      const isNewStream = !state.isLive || (state.lastStreamId && state.lastStreamId !== stream.id);
+      if (isNewStream) {
         const guild = client.guilds.cache.get(ids.guildId);
-        if (!guild) return;
+        if (!guild) {
+          console.error('[BOT] Guild do Discord não encontrada ao enviar notificação de live.');
+          return;
+        }
 
         const channel = guild.channels.cache.get(ids.canais.liveNotify);
-        if (!channel) return;
+        if (!channel) {
+          console.error(`[BOT] Canal de notificação de live (${ids.canais.liveNotify}) não encontrado.`);
+          return;
+        }
 
+        const avatarUrl = await getTwitchUserAvatar(username, token, clientId);
         const thumbnailUrl = stream.thumbnail_url
-          ? stream.thumbnail_url.replace('{width}x{height}', '640x360')
-          : 'https://static-cdn.jtvnw.net/previews-ttv/live_user_vk_delaass-640x360.jpg';
+          ? stream.thumbnail_url.replace('{width}x{height}', '1280x720') + `?t=${Date.now()}`
+          : `https://static-cdn.jtvnw.net/previews-ttv/live_user_${username}-1280x720.jpg`;
 
         const container = buildLiveNotifyContainer({
           streamTitle: stream.title || 'Live sem título',
           gameName: stream.game_name || 'Sem categoria',
           streamThumbnailUrl: thumbnailUrl,
-          avatarUrl: AVATAR_URL,
+          avatarUrl: avatarUrl,
           platform: 'twitch',
+          twitchUsername: username,
         });
 
         await channel.send({
@@ -103,24 +153,26 @@ async function checkTwitch(client) {
           components: [container],
         });
 
-        console.log(`[BOT] Notificação de live enviada: ${stream.title}`);
-        saveState({ isLive: true });
+        console.log(`[BOT] 🔴 Notificação de live enviada no Discord (${username}): "${stream.title}"`);
+        saveState({ isLive: true, lastStreamId: stream.id });
       }
     } else {
       if (state.isLive) {
-        saveState({ isLive: false });
-        console.log('[BOT] Twitch live encerrada, estado resetado');
+        saveState({ isLive: false, lastStreamId: state.lastStreamId || null });
+        console.log(`[BOT] Twitch live de ${username} encerrada, estado resetado.`);
       }
     }
   } catch (error) {
-    console.error('[BOT] Erro ao verificar Twitch:', error);
+    console.error('[BOT] Erro ao verificar status da Twitch:', error.message || error);
   }
 }
 
 function startTwitchMonitor(client) {
-  console.log('[BOT] Monitor de Twitch iniciado');
+  const username = getTwitchUsername();
+  console.log(`[BOT] Monitor de Twitch iniciado para o canal: ${username}`);
   checkTwitch(client);
   setInterval(() => checkTwitch(client), POLL_INTERVAL);
 }
 
 module.exports = { startTwitchMonitor };
+

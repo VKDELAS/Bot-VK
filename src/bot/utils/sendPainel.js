@@ -42,15 +42,18 @@ function clearStoredMessageId() {
 }
 
 function buildContainer(guild) {
-  const iconURL = guild.iconURL({ dynamic: true, size: 256 });
+  const iconURL = guild.iconURL({ extension: 'png', size: 256 });
 
   const container = new ContainerBuilder().setAccentColor(CORES.padrao);
 
-  // Cabeçalho com thumbnail do servidor
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent('🛡️ **VERIFICAÇÃO DE MEMBROS**'),
+  );
+
   const header = new SectionBuilder().addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      '## Verificação de Acesso\n' +
-        'Para liberar seu acesso completo ao servidor, clique no botão abaixo.'
+      `# Bem-vindo(a) ao ${guild.name}!\n\n` +
+      `Para liberar o seu acesso completo aos canais e categorias do servidor, confirme sua verificação clicando no botão abaixo.`
     )
   );
   if (iconURL) {
@@ -59,42 +62,45 @@ function buildContainer(guild) {
   container.addSectionComponents(header);
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      '**Alterações realizadas**\n' +
-        '> Adicionado: **Inscrito**, **Verificado**\n' +
-        '> Removido: **Não Inscrito**'
+      '📋 **Benefícios da Verificação:**\n' +
+      '• **Cargos atribuídos:** Inscrito e Verificado\n' +
+      '• **Acesso liberado:** Canais de bate-papo, lives, notificações e conteúdos exclusivos\n' +
+      '• **Cargo removido:** Não Inscrito'
     )
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
   );
 
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('verificar')
-        .setLabel('Verificar-se')
+        .setLabel('Concluir Verificação')
         .setStyle(ButtonStyle.Success)
+        .setEmoji('✅')
     )
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `-# ${guild.name} · verificação instantânea e necessária apenas uma vez`
+      `-# ${guild.name} • Verificação instantânea e necessária apenas uma vez`
     )
   );
 
   return container;
 }
+
 
 async function getExistingPainel(channel) {
   const storedId = getStoredMessageId();

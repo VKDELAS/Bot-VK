@@ -2,8 +2,6 @@ const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('disc
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
-const AVATAR_URL = 'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a58c222&is=6a5770a2&hm=a57737de05677601702d4a46dffedd89678df0a1b54c8094a81c42d54f29e2c3&';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('testar-embeds')
@@ -11,7 +9,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('tipo')
-        .setDescription('Qual embed testar')
+        .setDescription('Qual container testar')
         .addChoices(
           { name: 'Vídeo novo (YouTube)', value: 'video' },
           { name: 'Live (Twitch)', value: 'live-twitch' },
@@ -25,14 +23,16 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     const tipo = interaction.options.getString('tipo') || 'both';
+    const guildIcon = interaction.guild?.iconURL({ extension: 'png', size: 256 });
+    const twitchUsername = process.env.TWITCH_USERNAME || 'vk_delaass';
 
     try {
       if (tipo === 'video' || tipo === 'both') {
         const videoContainer = buildVideoNotifyContainer({
-          videoTitle: 'TESTE — Como criar um bot no Discord',
-          videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          videoTitle: 'TESTE — Novo Vídeo no Canal VK DELAS',
+          videoUrl: 'https://www.youtube.com/@vk_delaass',
           videoThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          channelAvatarUrl: AVATAR_URL,
+          channelAvatarUrl: guildIcon,
         });
 
         await interaction.channel.send({
@@ -43,11 +43,12 @@ module.exports = {
 
       if (tipo === 'live-twitch' || tipo === 'both') {
         const liveContainer = buildLiveNotifyContainer({
-          streamTitle: 'TESTE — Live chill jogando qualquer coisa',
+          streamTitle: 'TESTE — Transmissão Ao Vivo na Twitch!',
           gameName: 'Just Chatting',
-          streamThumbnailUrl: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_vk_delaass-640x360.jpg',
-          avatarUrl: AVATAR_URL,
+          streamThumbnailUrl: `https://static-cdn.jtvnw.net/previews-ttv/live_user_${twitchUsername}-1280x720.jpg?t=${Date.now()}`,
+          avatarUrl: guildIcon,
           platform: 'twitch',
+          twitchUsername: twitchUsername,
         });
 
         await interaction.channel.send({
@@ -58,10 +59,10 @@ module.exports = {
 
       if (tipo === 'live-youtube' || tipo === 'both') {
         const liveContainer = buildLiveNotifyContainer({
-          streamTitle: 'TESTE — Live no YouTube',
+          streamTitle: 'TESTE — Transmissão Ao Vivo no YouTube!',
           gameName: 'YouTube Live',
           streamThumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
-          avatarUrl: AVATAR_URL,
+          avatarUrl: guildIcon,
           platform: 'youtube',
           videoId: 'dQw4w9WgXcQ',
         });
@@ -72,10 +73,11 @@ module.exports = {
         });
       }
 
-      await interaction.editReply({ content: 'Containers enviados com sucesso neste canal.' });
+      await interaction.editReply({ content: '✅ Containers de teste enviados com sucesso neste canal!' });
     } catch (error) {
       console.error('[BOT] Erro ao testar embeds:', error);
-      await interaction.editReply({ content: `Erro: ${error.message}` });
+      await interaction.editReply({ content: `❌ Erro ao enviar teste: ${error.message}` });
     }
   },
 };
+

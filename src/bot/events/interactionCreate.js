@@ -47,21 +47,39 @@ module.exports = {
       const roleVerificado = interaction.guild.roles.cache.get(ids.cargos.verificado);
 
       if (!roleInscrito || !roleVerificado) {
-        const embed = new EmbedBuilder()
-          .setTitle('Erro na Verificação')
-          .setDescription('Os cargos de verificação não foram configurados corretamente no servidor.\n\n> Contate um administrador.')
-          .setColor(0xED4245)
-          .setTimestamp();
-        return interaction.editReply({ embeds: [embed] });
+        const errorContainer = new ContainerBuilder()
+          .setAccentColor(0xED4245)
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent('⚠️ **ERRO DE CONFIGURAÇÃO**'),
+          )
+          .addSectionComponents(
+            new SectionBuilder().addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                '## Cargos não encontrados\n' +
+                'Os cargos de verificação não foram encontrados ou configurados neste servidor.\n\n' +
+                '> Entre em contato com a equipe de administração.'
+              )
+            )
+          );
+        return interaction.editReply({ components: [errorContainer], flags: MessageFlags.IsComponentsV2 });
       }
 
       if (member.roles.cache.has(ids.cargos.verificado)) {
-        const embed = new EmbedBuilder()
-          .setTitle('Você já está verificado')
-          .setDescription('Seu acesso já foi liberado anteriormente.')
-          .setColor(0xFEE75C)
-          .setTimestamp();
-        return interaction.editReply({ embeds: [embed] });
+        const alreadyContainer = new ContainerBuilder()
+          .setAccentColor(0xFEE75C)
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent('ℹ️ **VOCÊ JÁ ESTÁ VERIFICADO**'),
+          )
+          .addSectionComponents(
+            new SectionBuilder().addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                '## Acesso Liberado\n' +
+                'Seu perfil já possui a verificação concluída e seu acesso já está liberado!\n\n' +
+                'Aproveite a comunidade e os canais disponíveis.'
+              )
+            )
+          );
+        return interaction.editReply({ components: [alreadyContainer], flags: MessageFlags.IsComponentsV2 });
       }
 
       const rolesToAdd = [roleInscrito, roleVerificado].filter(Boolean);
@@ -71,34 +89,50 @@ module.exports = {
         await member.roles.remove(roleNaoInscrito, 'Verificação concluída');
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle('Verificação Concluída')
-        .setDescription(
-          'Seus cargos foram ajustados com sucesso.\n\n' +
-          '**Acessos liberados**\n' +
-          `• ${roleInscrito}\n` +
-          `• ${roleVerificado}`
+      const successContainer = new ContainerBuilder()
+        .setAccentColor(0x57F287)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent('🎉 **VERIFICAÇÃO CONCLUÍDA COM SUCESSO!**'),
         )
-        .setColor(0x57F287)
-        .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL({ dynamic: true }) })
-        .setTimestamp();
+        .addSectionComponents(
+          new SectionBuilder().addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              '## Acesso Total Concedido\n' +
+              'Seus cargos foram atualizados e o seu acesso ao servidor foi liberado.\n\n' +
+              '**Cargos Recebidos:**\n' +
+              `• ${roleInscrito}\n` +
+              `• ${roleVerificado}`
+            )
+          )
+        )
+        .addSeparatorComponents(
+          new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+        )
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            `-# ${interaction.guild.name} • Obrigado por se verificar!`
+          )
+        );
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ components: [successContainer], flags: MessageFlags.IsComponentsV2 });
       console.log(`[BOT] ${member.user.tag} verificou-se com sucesso`);
 
       const logChannel = interaction.guild.channels.cache.get(ids.canais.logs);
       if (logChannel) {
         const logContainer = new ContainerBuilder().setAccentColor(0x57F287);
 
-        logContainer.addSectionComponents(
-          new SectionBuilder().addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-              '## Verificação Realizada'
-            )
-          ).setThumbnailAccessory(
-            new ThumbnailBuilder().setURL(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+        const memberAvatar = member.user.displayAvatarURL({ extension: 'png', size: 256 });
+
+        const logSection = new SectionBuilder().addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            '## Verificação Registrada'
           )
         );
+        if (memberAvatar) {
+          logSection.setThumbnailAccessory(new ThumbnailBuilder().setURL(memberAvatar));
+        }
+
+        logContainer.addSectionComponents(logSection);
 
         logContainer.addSeparatorComponents(
           new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
@@ -127,7 +161,7 @@ module.exports = {
 
         logContainer.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            `-# ${interaction.guild.name} · verificação registrada automaticamente`
+            `-# ${interaction.guild.name} · Verificação registrada automaticamente`
           )
         );
 
@@ -138,12 +172,20 @@ module.exports = {
       }
     } catch (error) {
       console.error('[BOT] Erro na verificação:', error);
-        const embed = new EmbedBuilder()
-          .setTitle('Erro na Verificação')
-          .setDescription('Ocorreu um erro ao processar sua verificação. Tente novamente ou contate um administrador.')
-          .setColor(0xED4245)
-          .setTimestamp();
-      await interaction.editReply({ embeds: [embed] });
+      const failContainer = new ContainerBuilder()
+        .setAccentColor(0xED4245)
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent('❌ **ERRO AO PROCESSAR VERIFICAÇÃO**'),
+        )
+        .addSectionComponents(
+          new SectionBuilder().addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              'Ocorreu uma falha ao tentar atualizar seus cargos.\nPor favor, tente novamente em instantes ou contate um administrador.'
+            )
+          )
+        );
+      await interaction.editReply({ components: [failContainer], flags: MessageFlags.IsComponentsV2 });
     }
+
   },
 };
