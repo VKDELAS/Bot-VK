@@ -1,4 +1,6 @@
 node_modules/
 .env
-data/
+data/twitch-state.json
+data/youtube-state.json
+data/verification.json
 .next/

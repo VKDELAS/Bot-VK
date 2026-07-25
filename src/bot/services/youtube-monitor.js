@@ -131,8 +131,12 @@ async function sendViaWebhook(webhookUrl, container) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ flags: MessageFlags.IsComponentsV2, components: [container] }),
+    body: JSON.stringify({ flags: MessageFlags.IsComponentsV2, components: [container.toJSON()] }),
   });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '(sem corpo)');
+    console.error(`[BOT] Webhook retornou HTTP ${res.status}: ${errBody}`);
+  }
   return res.ok;
 }
 

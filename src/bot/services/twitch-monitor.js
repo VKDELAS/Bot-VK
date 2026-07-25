@@ -154,11 +154,12 @@ async function checkTwitch(client) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               flags: MessageFlags.IsComponentsV2,
-              components: [container],
+              components: [container.toJSON()],
             }),
           });
           if (!whRes.ok) {
-            console.error(`[BOT] Webhook retornou status HTTP ${whRes.status}`);
+            const errBody = await whRes.text().catch(() => '(sem corpo)');
+            console.error(`[BOT] Webhook retornou status HTTP ${whRes.status}: ${errBody}`);
           } else {
             console.log(`[BOT] ✅ Notificação enviada com sucesso via Webhook! (${username})`);
           }
