@@ -148,12 +148,37 @@ async function checkTwitch(client) {
           twitchUsername: username,
         });
 
-        await channel.send({
-          flags: MessageFlags.IsComponentsV2,
-          components: [container],
-        });
+        const webhookUrl = process.env.DISCORD_LIVE_WEBHOOK_URL;
+        if (webhookUrl && webhookUrl.startsWith('http')) {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              flags: MessageFlags.IsComponentsV2,
+              components: [container],
+            }),
+          });
+          console.log(`[BOT] 🔴 Notificação de live enviada via Webhook (${username}): "${stream.title}"`);
+        } else {
+          const guild = client.guilds.cache.get(ids.guildId);
+          if (!guild) {
+            console.error('[BOT] Guild do Discord não encontrada ao enviar notificação de live.');
+            return;
+          }
 
-        console.log(`[BOT] 🔴 Notificação de live enviada no Discord (${username}): "${stream.title}"`);
+          const channel = guild.channels.cache.get(ids.canais.liveNotify);
+          if (!channel) {
+            console.error(`[BOT] Canal de notificação de live (${ids.canais.liveNotify}) não encontrado.`);
+            return;
+          }
+
+          await channel.send({
+            flags: MessageFlags.IsComponentsV2,
+            components: [container],
+          });
+          console.log(`[BOT] 🔴 Notificação de live enviada via Canal Discord (${username}): "${stream.title}"`);
+        }
+
         saveState({ isLive: true, lastStreamId: stream.id });
       }
     } else {
@@ -163,9 +188,14 @@ async function checkTwitch(client) {
       }
     }
   } catch (error) {
-    console.error('[BOT] Erro ao verificar status da Twitch:', error.message || error);
+    if (error.message && error.message.includes('403')) {
+      console.error('[BOT] ❌ ERRO CRÍTICO NA TWITCH: TWITCH_CLIENT_SECRET inválido ou expirado! Gere um novo Secret em https://dev.twitch.tv/console/apps e atualize o .env');
+    } else {
+      console.error('[BOT] Erro ao verificar status da Twitch:', error.message || error);
+    }
   }
 }
+
 
 function startTwitchMonitor(client) {
   const username = getTwitchUsername();
