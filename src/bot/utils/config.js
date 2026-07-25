@@ -29,7 +29,7 @@ function getLiveNotifyChannelId() {
 }
 
 function getVideoNotifyChannelId() {
-  return loadConfig().videoNotifyChannelId || (process.env.CANAL_VIDEO_NOTIFY || '').trim() || null;
+  return loadConfig().videoNotifyChannelId || (process.env.CANAL_VIDEO_NOTIFY || '').trim() || (process.env.CANAL_LIVE_NOTIFY || '').trim() || null;
 }
 
 function setLiveNotifyChannelId(channelId) {
