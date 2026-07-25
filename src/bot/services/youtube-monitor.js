@@ -2,6 +2,7 @@ const { MessageFlags } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const { getLiveNotifyChannelId, getVideoNotifyChannelId } = require('../utils/config');
+const { jáEnviou, marcarEnviado } = require('../utils/dedup');
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
@@ -175,6 +176,13 @@ async function checkYouTubeLive(client) {
       if (!available) continue;
 
       console.log(`[BOT] 🔴 LIVE DETECTADA NO YOUTUBE: "${entry.title}" - Enviando notificação...`);
+
+      const dedupKey = `yt-live-${entry.videoId}`;
+      if (jáEnviou(dedupKey)) {
+        console.log(`[BOT] ↳ Notificação de live já enviada (dedup), pulando.`);
+        return;
+      }
+
       const thumbnailUrl = `https://img.youtube.com/vi/${entry.videoId}/maxresdefault.jpg`;
 
       const container = buildLiveNotifyContainer({
@@ -197,6 +205,7 @@ async function checkYouTubeLive(client) {
       }
 
       if (ok) {
+        marcarEnviado(dedupKey);
         saveState({ ...state, lastLiveId: entry.videoId });
         return;
       }
@@ -234,6 +243,13 @@ async function checkYouTube(client) {
     }
 
     console.log(`[BOT] 📹 Vídeo novo detectado no YouTube: "${latest.title}" - Enviando notificação...`);
+
+    const dedupKey = `yt-video-${latest.videoId}`;
+    if (jáEnviou(dedupKey)) {
+      console.log(`[BOT] ↳ Notificação de vídeo já enviada (dedup), pulando.`);
+      return;
+    }
+
     const thumbnailUrl = `https://img.youtube.com/vi/${latest.videoId}/maxresdefault.jpg`;
 
     const container = buildVideoNotifyContainer({
@@ -254,6 +270,7 @@ async function checkYouTube(client) {
     }
 
     if (ok) {
+      marcarEnviado(dedupKey);
       saveState({ ...state, lastVideoId: latest.videoId });
     }
   } catch (error) {

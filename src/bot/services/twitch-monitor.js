@@ -2,6 +2,7 @@ const { MessageFlags } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const { getLiveNotifyChannelId } = require('../utils/config');
+const { jáEnviou, marcarEnviado } = require('../utils/dedup');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.json');
@@ -131,6 +132,12 @@ async function checkTwitch(client) {
     if (stream) {
       const isNewStream = !state.isLive || (state.lastStreamId !== stream.id);
       if (isNewStream) {
+        const dedupKey = `twitch-${stream.id}`;
+        if (jáEnviou(dedupKey)) {
+          console.log(`[BOT] ↳ Notificação de live Twitch já enviada (dedup), pulando.`);
+          return;
+        }
+
         console.log(`[BOT] 🔴 LIVE DETECTADA NA TWITCH (${username}): "${stream.title}" - Enviando notificação...`);
 
         const avatarUrl = await getTwitchUserAvatar(username, token, clientId);
@@ -183,6 +190,7 @@ async function checkTwitch(client) {
           console.log(`[BOT] ✅ Notificação enviada com sucesso via Canal Discord! (${username})`);
         }
 
+        marcarEnviado(dedupKey);
         saveState({ isLive: true, lastStreamId: stream.id });
       }
     } else {
