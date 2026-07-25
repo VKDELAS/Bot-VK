@@ -189,16 +189,19 @@ async function checkYouTubeLive(client) {
       });
 
       const webhookUrl = getLiveWebhookUrl();
+      let ok = false;
       if (webhookUrl) {
-        const ok = await sendViaWebhook(webhookUrl, container);
+        ok = await sendViaWebhook(webhookUrl, container);
         console.log(ok ? '[BOT] ✅ Notificação de live YouTube enviada via Webhook!' : '[BOT] ❌ Webhook falhou.');
       } else {
-        const ok = await sendToChannel(client, 'liveNotify', container);
+        ok = await sendToChannel(client, 'liveNotify', container);
         console.log(ok ? '[BOT] ✅ Notificação de live YouTube enviada via Canal Discord!' : '[BOT] ❌ Falha ao enviar pelo canal.');
       }
 
-      saveState({ ...state, lastLiveId: entry.videoId });
-      return;
+      if (ok) {
+        saveState({ ...state, lastLiveId: entry.videoId });
+        return;
+      }
     }
 
     // Nenhuma live encontrada no RSS - se tinha uma, encerrou
@@ -243,15 +246,18 @@ async function checkYouTube(client) {
     });
 
     const webhookUrl = getVideoWebhookUrl();
+    let ok = false;
     if (webhookUrl) {
-      const ok = await sendViaWebhook(webhookUrl, container);
-      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Webhook!' : '[BOT] ❌ Webhook falhou.');
+      ok = await sendViaWebhook(webhookUrl, container);
+      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Webhook!' : '[BOT] ❌ Webhook vídeo falhou.');
     } else {
-      const ok = await sendToChannel(client, 'videoNotify', container);
-      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Canal Discord!' : '[BOT] ❌ Falha ao enviar pelo canal.');
+      ok = await sendToChannel(client, 'videoNotify', container);
+      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Canal Discord!' : '[BOT] ❌ Falha ao enviar vídeo pelo canal.');
     }
 
-    saveState({ ...state, lastVideoId: latest.videoId });
+    if (ok) {
+      saveState({ ...state, lastVideoId: latest.videoId });
+    }
   } catch (error) {
     console.error('[BOT] Erro no checkYouTube:', error.message || error);
   }
