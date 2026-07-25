@@ -153,7 +153,7 @@ async function checkTwitch(client) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              flags: MessageFlags.IsComponentsV2,
+              flags: 32768,
               components: [container.toJSON()],
             }),
           });

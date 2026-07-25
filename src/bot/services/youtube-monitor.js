@@ -131,7 +131,7 @@ async function sendViaWebhook(webhookUrl, container) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ flags: MessageFlags.IsComponentsV2, components: [container.toJSON()] }),
+    body: JSON.stringify({ flags: 32768, components: [container.toJSON()] }),
   });
   if (!res.ok) {
     const errBody = await res.text().catch(() => '(sem corpo)');
