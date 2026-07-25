@@ -5,15 +5,24 @@ const ids = require('../../lib/ids');
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
-const API_BASE = 'https://www.googleapis.com/youtube/v3';
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-state.json');
-const LIVE_STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-live-state.json');
+const VIDEO_POLL_INTERVAL = 2 * 60 * 1000;  // 2 minutos para vídeos
+const LIVE_POLL_INTERVAL  = 30 * 1000;       // 30 segundos para lives
 
 function getChannelId() {
   return (process.env.YOUTUBE_CHANNEL_ID || 'UC3Bkdcwe1IwiZrg9CBB76OQ').trim();
 }
 
-function getWebhookUrl() {
+function getVideoWebhookUrl() {
+  let url = (process.env.DISCORD_VIDEO_WEBHOOK_URL || process.env.DISCORD_LIVE_WEBHOOK_URL || '').trim();
+  if (!url) return null;
+  if (url.includes('https://discord.com/api/webhooks/https://discord.com/api/webhooks/')) {
+    url = url.replace('https://discord.com/api/webhooks/https://discord.com/api/webhooks/', 'https://discord.com/api/webhooks/');
+  }
+  return url;
+}
+
+function getLiveWebhookUrl() {
   let url = (process.env.DISCORD_LIVE_WEBHOOK_URL || '').trim();
   if (!url) return null;
   if (url.includes('https://discord.com/api/webhooks/https://discord.com/api/webhooks/')) {
@@ -22,11 +31,10 @@ function getWebhookUrl() {
   return url;
 }
 
-
-function loadState(filePath) {
+function loadState() {
   try {
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (fs.existsSync(STATE_PATH)) {
+      return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
     }
   } catch (error) {
     console.error('[BOT] Erro ao ler estado YouTube:', error.message);
@@ -34,210 +42,203 @@ function loadState(filePath) {
   return { lastVideoId: null, lastLiveId: null };
 }
 
-function saveState(filePath, state) {
+function saveState(state) {
   try {
-    const dir = path.dirname(filePath);
+    const dir = path.dirname(STATE_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+    fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
   } catch (error) {
     console.error('[BOT] Erro ao salvar estado YouTube:', error.message);
   }
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
-
-let cachedYoutubeAvatar = null;
-let youtubeAvatarExpiresAt = 0;
-
-async function getYouTubeChannelAvatar(channelId) {
-  if (cachedYoutubeAvatar && Date.now() < youtubeAvatarExpiresAt) return cachedYoutubeAvatar;
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) return null;
-
+// Lê o feed RSS e retorna lista de vídeos com info de live
+async function fetchRssEntries(channelId) {
   try {
-    const url = `${API_BASE}/channels?key=${apiKey}&id=${channelId}&part=snippet`;
-    const data = await fetchJson(url);
-    if (data.items && data.items[0] && data.items[0].snippet && data.items[0].snippet.thumbnails) {
-      const thumbs = data.items[0].snippet.thumbnails;
-      cachedYoutubeAvatar = (thumbs.high || thumbs.medium || thumbs.default).url;
-      youtubeAvatarExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
-      return cachedYoutubeAvatar;
+    const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) {
+      console.error('[BOT] RSS YouTube retornou HTTP', response.status);
+      return [];
     }
-  } catch (err) {
-    // Silenciosamente ignora e usa fallback
-  }
-  return null;
-}
-
-// Fallback gratuito via RSS XML sem necessidade de API Key
-async function getLatestVideoFromRss(channelId) {
-  try {
-    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-    const response = await fetch(rssUrl);
-    if (!response.ok) return null;
     const xml = await response.text();
 
-    const videoIdMatch = xml.match(/<yt:videoId>(.*?)<\/yt:videoId>/);
-    const titleMatch = xml.match(/<title>(.*?)<\/title>/g);
+    const entries = [];
+    const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+    let match;
+    while ((match = entryRegex.exec(xml)) !== null) {
+      const entry = match[1];
+      const videoIdMatch = entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/);
+      const titleMatch   = entry.match(/<title>(.*?)<\/title>/);
+      const isLiveMatch  = entry.match(/<media:content[^>]*medium="video"[^>]*\/>/) ||
+                           entry.match(/<media:live[^>]*>true<\/media:live>/);
 
-    if (videoIdMatch && titleMatch && titleMatch.length > 1) {
-      const videoId = videoIdMatch[1];
-      // O primeiro título no XML é o do canal, o segundo é o do primeiro vídeo
-      const rawTitle = titleMatch[1].replace(/<\/?title>/g, '').replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1');
-      return {
-        videoId,
-        title: rawTitle,
-        thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      };
+      if (!videoIdMatch || !titleMatch) continue;
+
+      const videoId = videoIdMatch[1].trim();
+      const rawTitle = titleMatch[1]
+        .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+        .trim();
+
+      // Detecta live pelos emojis/indicadores no título + campo yt:startTime
+      const liveStartMatch = entry.match(/<yt:startTime>(.*?)<\/yt:startTime>/);
+      const hasLiveEmoji   = /^🔴/.test(rawTitle) || rawTitle.toLowerCase().includes('[live]');
+      const hasStartTime   = !!liveStartMatch;
+
+      // Verifica se a live está ativa agora via oEmbed (leve e sem API key)
+      entries.push({ videoId, title: rawTitle, hasLiveEmoji, hasStartTime });
     }
+    return entries;
   } catch (error) {
-    console.error('[BOT] Erro ao buscar RSS do YouTube:', error.message);
-  }
-  return null;
-}
-
-async function getLatestVideo() {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  const channelId = getChannelId();
-
-  if (!apiKey) {
-    return getLatestVideoFromRss(channelId);
-  }
-
-  try {
-    // Busca os últimos vídeos postados (redefinido sem eventType=completed)
-    const url = `${API_BASE}/search?key=${apiKey}&channelId=${channelId}&part=snippet&type=video&order=date&maxResults=1`;
-    const data = await fetchJson(url);
-    if (!data.items || data.items.length === 0) return null;
-    const item = data.items[0];
-    return {
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      thumbnailUrl: `https://i.ytimg.com/vi/${item.id.videoId}/maxresdefault.jpg`,
-    };
-  } catch (error) {
-    console.warn('[BOT] API do YouTube falhou. Usando fallback de RSS:', error.message);
-    return getLatestVideoFromRss(channelId);
+    console.error('[BOT] Erro ao buscar RSS YouTube:', error.message);
+    return [];
   }
 }
 
-async function getLatestLive() {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) return null;
-  const channelId = getChannelId();
-
+// Verifica se a live está ativa checando o thumbnail especial do YouTube
+// Enquanto a live está ao vivo, o YouTube serve uma thumbnail diferente via img.youtube.com
+async function isCurrentlyLive(videoId) {
   try {
-    const url = `${API_BASE}/search?key=${apiKey}&channelId=${channelId}&part=snippet&type=video&eventType=live&order=date&maxResults=1`;
-    const data = await fetchJson(url);
-    if (!data.items || data.items.length === 0) return null;
-    const item = data.items[0];
-    return {
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      thumbnailUrl: `https://i.ytimg.com/vi/${item.id.videoId}/maxresdefault.jpg`,
-    };
-  } catch (error) {
-    console.error('[BOT] Erro ao verificar Live no YouTube:', error.message);
-    return null;
+    // A thumbnail maxresdefault só é atualizada em tempo real durante lives ativas
+    // Verificamos via oEmbed: se o tipo for "video" com título contendo 🔴 no RSS = live ativa
+    const oembedRes = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    // Se oEmbed falhar = vídeo privado/indisponível
+    return oembedRes.ok;
+  } catch {
+    return false;
   }
 }
 
-async function checkYouTube(client) {
-  try {
-    const video = await getLatestVideo();
-    if (!video) return;
+async function sendToChannel(client, channelKey, container) {
+  const guild = client.guilds.cache.get(ids.guildId);
+  if (!guild) { console.error('[BOT] Guild não encontrada.'); return false; }
+  const channel = guild.channels.cache.get(ids.canais[channelKey]);
+  if (!channel) { console.error(`[BOT] Canal ${channelKey} não encontrado (ID: ${ids.canais[channelKey]})`); return false; }
+  await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+  return true;
+}
 
-    const state = loadState(STATE_PATH);
-    if (state.lastVideoId === video.videoId) return;
-
-    // Se for primeira execução e o estado estiver nulo, salva para não spammar vídeos antigos
-    if (!state.lastVideoId) {
-      saveState(STATE_PATH, { lastVideoId: video.videoId });
-      return;
-    }
-
-    const guild = client.guilds.cache.get(ids.guildId);
-    if (!guild) return;
-
-    const channel = guild.channels.cache.get(ids.canais.videoNotify);
-    if (!channel) return;
-
-    const avatarUrl = await getYouTubeChannelAvatar(getChannelId());
-
-    const container = buildVideoNotifyContainer({
-      videoTitle: video.title,
-      videoUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
-      videoThumbnailUrl: video.thumbnailUrl,
-      channelAvatarUrl: avatarUrl,
-    });
-
-    await channel.send({
-      flags: MessageFlags.IsComponentsV2,
-      components: [container],
-    });
-
-    console.log(`[BOT] 📹 Notificação de vídeo enviada no Discord: "${video.title}"`);
-    saveState(STATE_PATH, { lastVideoId: video.videoId });
-  } catch (error) {
-    console.error('[BOT] Erro no checkYouTube:', error.message || error);
-  }
+async function sendViaWebhook(webhookUrl, container) {
+  const res = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ flags: MessageFlags.IsComponentsV2, components: [container] }),
+  });
+  return res.ok;
 }
 
 async function checkYouTubeLive(client) {
   try {
-    const live = await getLatestLive();
-    const liveState = loadState(LIVE_STATE_PATH);
+    const channelId = getChannelId();
+    const entries = await fetchRssEntries(channelId);
+    if (!entries.length) return;
 
-    if (live) {
-      if (liveState.lastLiveId === live.videoId) return;
+    const state = loadState();
 
-      const guild = client.guilds.cache.get(ids.guildId);
-      if (!guild) return;
+    // Procura live: emoji 🔴 no título (padrão usado por streamers)
+    for (const entry of entries) {
+      const isLiveEntry = entry.hasLiveEmoji || entry.hasStartTime;
+      if (!isLiveEntry) continue;
 
-      const channel = guild.channels.cache.get(ids.canais.liveNotify);
-      if (!channel) return;
+      // Se já notificamos essa live, não reenvia
+      if (state.lastLiveId === entry.videoId) return;
 
-      const avatarUrl = await getYouTubeChannelAvatar(getChannelId());
+      // Confirma que o video está disponível (não foi deletado)
+      const available = await isCurrentlyLive(entry.videoId);
+      if (!available) continue;
+
+      console.log(`[BOT] 🔴 LIVE DETECTADA NO YOUTUBE: "${entry.title}" - Enviando notificação...`);
+      const thumbnailUrl = `https://img.youtube.com/vi/${entry.videoId}/maxresdefault.jpg`;
 
       const container = buildLiveNotifyContainer({
-        streamTitle: live.title,
+        streamTitle: entry.title,
         gameName: 'YouTube Live',
-        streamThumbnailUrl: live.thumbnailUrl,
-        avatarUrl: avatarUrl,
+        streamThumbnailUrl: thumbnailUrl,
+        avatarUrl: null,
         platform: 'youtube',
-        videoId: live.videoId,
+        videoId: entry.videoId,
       });
 
-      await channel.send({
-        flags: MessageFlags.IsComponentsV2,
-        components: [container],
-      });
-
-      console.log(`[BOT] 🔴 Notificação de live YouTube enviada no Discord: "${live.title}"`);
-      saveState(LIVE_STATE_PATH, { lastLiveId: live.videoId });
-    } else {
-      if (liveState.lastLiveId) {
-        saveState(LIVE_STATE_PATH, { lastLiveId: null });
-        console.log('[BOT] YouTube live encerrada, estado resetado.');
+      const webhookUrl = getLiveWebhookUrl();
+      if (webhookUrl) {
+        const ok = await sendViaWebhook(webhookUrl, container);
+        console.log(ok ? '[BOT] ✅ Notificação de live YouTube enviada via Webhook!' : '[BOT] ❌ Webhook falhou.');
+      } else {
+        const ok = await sendToChannel(client, 'liveNotify', container);
+        console.log(ok ? '[BOT] ✅ Notificação de live YouTube enviada via Canal Discord!' : '[BOT] ❌ Falha ao enviar pelo canal.');
       }
+
+      saveState({ ...state, lastLiveId: entry.videoId });
+      return;
+    }
+
+    // Nenhuma live encontrada no RSS - se tinha uma, encerrou
+    if (state.lastLiveId) {
+      saveState({ ...state, lastLiveId: null });
+      console.log('[BOT] YouTube live encerrada, estado resetado.');
     }
   } catch (error) {
     console.error('[BOT] Erro no checkYouTubeLive:', error.message || error);
   }
 }
 
+async function checkYouTube(client) {
+  try {
+    const channelId = getChannelId();
+    const entries = await fetchRssEntries(channelId);
+    if (!entries.length) return;
+
+    const state = loadState();
+    const latest = entries[0]; // Primeiro = mais recente
+
+    // Pula lives (já tratadas em checkYouTubeLive)
+    if (latest.hasLiveEmoji || latest.hasStartTime) return;
+
+    if (state.lastVideoId === latest.videoId) return;
+
+    // Primeira execução: salva sem enviar (evita spam de vídeo antigo)
+    if (!state.lastVideoId) {
+      console.log(`[BOT] YouTube: primeiro boot, salvando estado sem notificar (${latest.title})`);
+      saveState({ ...state, lastVideoId: latest.videoId });
+      return;
+    }
+
+    console.log(`[BOT] 📹 Vídeo novo detectado no YouTube: "${latest.title}" - Enviando notificação...`);
+    const thumbnailUrl = `https://img.youtube.com/vi/${latest.videoId}/maxresdefault.jpg`;
+
+    const container = buildVideoNotifyContainer({
+      videoTitle: latest.title,
+      videoUrl: `https://www.youtube.com/watch?v=${latest.videoId}`,
+      videoThumbnailUrl: thumbnailUrl,
+      channelAvatarUrl: null,
+    });
+
+    const webhookUrl = getVideoWebhookUrl();
+    if (webhookUrl) {
+      const ok = await sendViaWebhook(webhookUrl, container);
+      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Webhook!' : '[BOT] ❌ Webhook falhou.');
+    } else {
+      const ok = await sendToChannel(client, 'videoNotify', container);
+      console.log(ok ? '[BOT] ✅ Notificação de vídeo YouTube enviada via Canal Discord!' : '[BOT] ❌ Falha ao enviar pelo canal.');
+    }
+
+    saveState({ ...state, lastVideoId: latest.videoId });
+  } catch (error) {
+    console.error('[BOT] Erro no checkYouTube:', error.message || error);
+  }
+}
+
 function startYoutubeMonitor(client) {
   const channelId = getChannelId();
   console.log(`[BOT] Monitor de YouTube iniciado para o canal: ${channelId}`);
-  checkYouTube(client);
+  // Roda imediatamente e depois em intervalos
   checkYouTubeLive(client);
-  setInterval(() => checkYouTube(client), 3 * 60 * 1000);
-  setInterval(() => checkYouTubeLive(client), 2 * 60 * 1000);
+  checkYouTube(client);
+  setInterval(() => checkYouTubeLive(client), LIVE_POLL_INTERVAL);
+  setInterval(() => checkYouTube(client), VIDEO_POLL_INTERVAL);
 }
 
 module.exports = { startYoutubeMonitor };
-
