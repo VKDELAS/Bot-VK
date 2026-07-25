@@ -1,7 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const ids = require('../../lib/ids');
+const { getLiveNotifyChannelId } = require('../utils/config');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.json');
@@ -163,15 +163,15 @@ async function checkTwitch(client) {
             console.log(`[BOT] ✅ Notificação enviada com sucesso via Webhook! (${username})`);
           }
         } else {
-          const guild = client.guilds.cache.get(ids.guildId);
-          if (!guild) {
-            console.error('[BOT] Guild do Discord não encontrada ao enviar notificação de live.');
+          const liveChannelId = getLiveNotifyChannelId();
+          if (!liveChannelId) {
+            console.error('[BOT] ❌ Canal de live não configurado! Use /canais live para definir o canal.');
             return;
           }
 
-          const channel = guild.channels.cache.get(ids.canais.liveNotify);
+          const channel = client.channels.cache.get(liveChannelId);
           if (!channel) {
-            console.error(`[BOT] Canal de notificação de live (${ids.canais.liveNotify}) não encontrado.`);
+            console.error(`[BOT] ❌ Canal de live (${liveChannelId}) não encontrado no cache. Verifique se o bot tem acesso ao canal.`);
             return;
           }
 

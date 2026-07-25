@@ -1,7 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const ids = require('../../lib/ids');
+const { getLiveNotifyChannelId, getVideoNotifyChannelId } = require('../utils/config');
 const { buildVideoNotifyContainer } = require('../utils/video-notify-container');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
@@ -112,11 +112,17 @@ async function isCurrentlyLive(videoId) {
   }
 }
 
-async function sendToChannel(client, channelKey, container) {
-  const guild = client.guilds.cache.get(ids.guildId);
-  if (!guild) { console.error('[BOT] Guild não encontrada.'); return false; }
-  const channel = guild.channels.cache.get(ids.canais[channelKey]);
-  if (!channel) { console.error(`[BOT] Canal ${channelKey} não encontrado (ID: ${ids.canais[channelKey]})`); return false; }
+async function sendToChannel(client, type, container) {
+  const channelId = type === 'liveNotify' ? getLiveNotifyChannelId() : getVideoNotifyChannelId();
+  if (!channelId) {
+    console.error(`[BOT] ❌ Canal de ${type === 'liveNotify' ? 'live' : 'vídeo'} não configurado! Use /canais ${type === 'liveNotify' ? 'live' : 'video'} para definir o canal.`);
+    return false;
+  }
+  const channel = client.channels.cache.get(channelId);
+  if (!channel) {
+    console.error(`[BOT] ❌ Canal ${type} (${channelId}) não encontrado no cache.`);
+    return false;
+  }
   await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
   return true;
 }
