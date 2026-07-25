@@ -136,11 +136,8 @@ async function sendToChannel(client, type, container) {
     await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
     return true;
   } catch (err) {
-    if (err instanceof AggregateError) {
-      console.error('[BOT] ❌ channel.send AggregateError:', [...err.errors].map(e => e.message).join(' | '));
-    } else {
-      console.error('[BOT] ❌ channel.send erro:', err.message || err);
-    }
+    const sub = err.errors ? Object.values(err.errors).map(e => e?.message || JSON.stringify(e)).join(' | ') : '';
+    console.error(`[BOT] ❌ channel.send erro: ${err.message}${sub ? ' → ' + sub : ''}`);
     return false;
   }
 }

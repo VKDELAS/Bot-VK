@@ -19,19 +19,19 @@ function buildVideoNotifyContainer({ videoTitle, videoUrl, videoThumbnailUrl, ch
     new TextDisplayBuilder().setContent('📹 **VÍDEO NOVO NO CANAL**'),
   );
 
-  const section = new SectionBuilder().addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      `# ${videoTitle}\n\n` +
-      `🔥 Conteúdo inédito disponível no canal! Corre para assistir e deixar o seu like.\n\n` +
-      `@everyone`,
-    ),
-  );
+  const textContent =
+    `# ${videoTitle}\n\n` +
+    `🔥 Conteúdo inédito disponível no canal! Corre para assistir e deixar o seu like.\n\n` +
+    `@everyone`;
 
   if (channelAvatarUrl && typeof channelAvatarUrl === 'string' && channelAvatarUrl.startsWith('http')) {
-    section.setThumbnailAccessory(new ThumbnailBuilder().setURL(channelAvatarUrl));
+    const section = new SectionBuilder()
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent))
+      .setThumbnailAccessory(new ThumbnailBuilder().setURL(channelAvatarUrl));
+    container.addSectionComponents(section);
+  } else {
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent));
   }
-
-  container.addSectionComponents(section);
 
   if (videoThumbnailUrl && typeof videoThumbnailUrl === 'string' && videoThumbnailUrl.startsWith('http')) {
     container.addMediaGalleryComponents(

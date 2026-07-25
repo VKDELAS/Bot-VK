@@ -57,20 +57,20 @@ function buildLiveNotifyContainer({
   );
 
   // Informações da Live
-  const section = new SectionBuilder().addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      `# ${streamTitle}\n\n` +
-      `🎮 **Categoria:** ${gameName || 'Geral'}\n` +
-      `✨ A live já começou! Venha acompanhar e trocar aquela ideia.\n\n` +
-      `@everyone`,
-    ),
-  );
+  const textContent =
+    `# ${streamTitle}\n\n` +
+    `🎮 **Categoria:** ${gameName || 'Geral'}\n` +
+    `✨ A live já começou! Venha acompanhar e trocar aquela ideia.\n\n` +
+    `@everyone`;
 
   if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('http')) {
-    section.setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl));
+    const section = new SectionBuilder()
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent))
+      .setThumbnailAccessory(new ThumbnailBuilder().setURL(avatarUrl));
+    container.addSectionComponents(section);
+  } else {
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(textContent));
   }
-
-  container.addSectionComponents(section);
 
   // Thumbnail em Galeria de Mídia
   if (streamThumbnailUrl && typeof streamThumbnailUrl === 'string' && streamThumbnailUrl.startsWith('http')) {
