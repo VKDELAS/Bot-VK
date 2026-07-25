@@ -8,7 +8,16 @@ const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.
 const POLL_INTERVAL = 90 * 1000;
 
 function getTwitchUsername() {
-  return process.env.TWITCH_USERNAME || 'vk_delaass';
+  return (process.env.TWITCH_USERNAME || 'vk_delaass').trim();
+}
+
+function getWebhookUrl() {
+  let url = (process.env.DISCORD_LIVE_WEBHOOK_URL || '').trim();
+  if (!url) return null;
+  if (url.includes('https://discord.com/api/webhooks/https://discord.com/api/webhooks/')) {
+    url = url.replace('https://discord.com/api/webhooks/https://discord.com/api/webhooks/', 'https://discord.com/api/webhooks/');
+  }
+  return url;
 }
 
 function loadState() {
@@ -38,8 +47,8 @@ let tokenExpiresAt = 0;
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
 
-  const clientId = process.env.TWITCH_CLIENT_ID;
-  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+  const clientId = (process.env.TWITCH_CLIENT_ID || '').trim();
+  const clientSecret = (process.env.TWITCH_CLIENT_SECRET || '').trim();
 
   if (!clientId || !clientSecret) {
     throw new Error('TWITCH_CLIENT_ID ou TWITCH_CLIENT_SECRET não configurados no arquivo .env');
@@ -93,10 +102,10 @@ async function getTwitchUserAvatar(username, token, clientId) {
 
 async function checkTwitch(client) {
   const username = getTwitchUsername();
-  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientId = (process.env.TWITCH_CLIENT_ID || '').trim();
 
   if (!clientId) {
-    console.warn('[BOT] TWITCH_CLIENT_ID ausente no .env. Pulando verificação Twitch.');
+    console.warn('[BOT] TWITCH_CLIENT_ID ausente na Discloud / .env. Pulando verificação Twitch.');
     return;
   }
 
@@ -122,18 +131,6 @@ async function checkTwitch(client) {
     if (stream) {
       const isNewStream = !state.isLive || (state.lastStreamId && state.lastStreamId !== stream.id);
       if (isNewStream) {
-        const guild = client.guilds.cache.get(ids.guildId);
-        if (!guild) {
-          console.error('[BOT] Guild do Discord não encontrada ao enviar notificação de live.');
-          return;
-        }
-
-        const channel = guild.channels.cache.get(ids.canais.liveNotify);
-        if (!channel) {
-          console.error(`[BOT] Canal de notificação de live (${ids.canais.liveNotify}) não encontrado.`);
-          return;
-        }
-
         const avatarUrl = await getTwitchUserAvatar(username, token, clientId);
         const thumbnailUrl = stream.thumbnail_url
           ? stream.thumbnail_url.replace('{width}x{height}', '1280x720') + `?t=${Date.now()}`
@@ -148,9 +145,9 @@ async function checkTwitch(client) {
           twitchUsername: username,
         });
 
-        const webhookUrl = process.env.DISCORD_LIVE_WEBHOOK_URL;
-        if (webhookUrl && webhookUrl.startsWith('http')) {
-          await fetch(webhookUrl, {
+        const webhookUrl = getWebhookUrl();
+        if (webhookUrl) {
+          const whRes = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -158,7 +155,11 @@ async function checkTwitch(client) {
               components: [container],
             }),
           });
-          console.log(`[BOT] 🔴 Notificação de live enviada via Webhook (${username}): "${stream.title}"`);
+          if (!whRes.ok) {
+            console.error(`[BOT] Webhook retornou status HTTP ${whRes.status}`);
+          } else {
+            console.log(`[BOT] 🔴 Notificação de live enviada via Webhook (${username}): "${stream.title}"`);
+          }
         } else {
           const guild = client.guilds.cache.get(ids.guildId);
           if (!guild) {

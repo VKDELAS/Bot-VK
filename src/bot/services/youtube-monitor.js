@@ -10,8 +10,18 @@ const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-state
 const LIVE_STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'youtube-live-state.json');
 
 function getChannelId() {
-  return process.env.YOUTUBE_CHANNEL_ID || 'UC3Bkdcwe1IwiZrg9CBB76OQ';
+  return (process.env.YOUTUBE_CHANNEL_ID || 'UC3Bkdcwe1IwiZrg9CBB76OQ').trim();
 }
+
+function getWebhookUrl() {
+  let url = (process.env.DISCORD_LIVE_WEBHOOK_URL || '').trim();
+  if (!url) return null;
+  if (url.includes('https://discord.com/api/webhooks/https://discord.com/api/webhooks/')) {
+    url = url.replace('https://discord.com/api/webhooks/https://discord.com/api/webhooks/', 'https://discord.com/api/webhooks/');
+  }
+  return url;
+}
+
 
 function loadState(filePath) {
   try {
