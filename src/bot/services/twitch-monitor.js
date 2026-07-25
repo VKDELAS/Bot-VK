@@ -5,7 +5,7 @@ const ids = require('../../lib/ids');
 const { buildLiveNotifyContainer } = require('../utils/live-notify-container');
 
 const STATE_PATH = path.join(__dirname, '..', '..', '..', 'data', 'twitch-state.json');
-const POLL_INTERVAL = 90 * 1000;
+const POLL_INTERVAL = 30 * 1000; // Checa a cada 30 segundos
 
 function getTwitchUsername() {
   return (process.env.TWITCH_USERNAME || 'vk_delaass').trim();
@@ -129,8 +129,10 @@ async function checkTwitch(client) {
     const state = loadState();
 
     if (stream) {
-      const isNewStream = !state.isLive || (state.lastStreamId && state.lastStreamId !== stream.id);
+      const isNewStream = !state.isLive || (state.lastStreamId !== stream.id);
       if (isNewStream) {
+        console.log(`[BOT] 🔴 LIVE DETECTADA NA TWITCH (${username}): "${stream.title}" - Enviando notificação...`);
+
         const avatarUrl = await getTwitchUserAvatar(username, token, clientId);
         const thumbnailUrl = stream.thumbnail_url
           ? stream.thumbnail_url.replace('{width}x{height}', '1280x720') + `?t=${Date.now()}`
@@ -158,7 +160,7 @@ async function checkTwitch(client) {
           if (!whRes.ok) {
             console.error(`[BOT] Webhook retornou status HTTP ${whRes.status}`);
           } else {
-            console.log(`[BOT] 🔴 Notificação de live enviada via Webhook (${username}): "${stream.title}"`);
+            console.log(`[BOT] ✅ Notificação enviada com sucesso via Webhook! (${username})`);
           }
         } else {
           const guild = client.guilds.cache.get(ids.guildId);
@@ -177,15 +179,15 @@ async function checkTwitch(client) {
             flags: MessageFlags.IsComponentsV2,
             components: [container],
           });
-          console.log(`[BOT] 🔴 Notificação de live enviada via Canal Discord (${username}): "${stream.title}"`);
+          console.log(`[BOT] ✅ Notificação enviada com sucesso via Canal Discord! (${username})`);
         }
 
         saveState({ isLive: true, lastStreamId: stream.id });
       }
     } else {
       if (state.isLive) {
-        saveState({ isLive: false, lastStreamId: state.lastStreamId || null });
-        console.log(`[BOT] Twitch live de ${username} encerrada, estado resetado.`);
+        saveState({ isLive: false, lastStreamId: null });
+        console.log(`[BOT] Twitch live de ${username} encerrada, estado de live resetado.`);
       }
     }
   } catch (error) {
@@ -196,6 +198,7 @@ async function checkTwitch(client) {
     }
   }
 }
+
 
 
 function startTwitchMonitor(client) {
