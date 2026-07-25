@@ -62,7 +62,7 @@ function buildContainer(guild) {
   container.addSectionComponents(header);
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
   );
 
   container.addTextDisplayComponents(
@@ -75,7 +75,7 @@ function buildContainer(guild) {
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
   );
 
   container.addActionRowComponents(
@@ -91,6 +91,7 @@ function buildContainer(guild) {
   container.addSeparatorComponents(
     new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
   );
+
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
