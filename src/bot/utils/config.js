@@ -25,11 +25,11 @@ function saveConfig(config) {
 }
 
 function getLiveNotifyChannelId() {
-  return loadConfig().liveNotifyChannelId || null;
+  return loadConfig().liveNotifyChannelId || (process.env.CANAL_LIVE_NOTIFY || '').trim() || null;
 }
 
 function getVideoNotifyChannelId() {
-  return loadConfig().videoNotifyChannelId || null;
+  return loadConfig().videoNotifyChannelId || (process.env.CANAL_VIDEO_NOTIFY || '').trim() || null;
 }
 
 function setLiveNotifyChannelId(channelId) {
