@@ -132,8 +132,17 @@ async function sendToChannel(client, type, container) {
     console.error(`[BOT] ❌ Canal ${type} (${channelId}) não encontrado no cache.`);
     return false;
   }
-  await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
-  return true;
+  try {
+    await channel.send({ flags: MessageFlags.IsComponentsV2, components: [container] });
+    return true;
+  } catch (err) {
+    if (err instanceof AggregateError) {
+      console.error('[BOT] ❌ channel.send AggregateError:', [...err.errors].map(e => e.message).join(' | '));
+    } else {
+      console.error('[BOT] ❌ channel.send erro:', err.message || err);
+    }
+    return false;
+  }
 }
 
 async function sendViaWebhook(webhookUrl, container) {
