@@ -70,8 +70,6 @@ async function fetchRssEntries(channelId) {
       const entry = match[1];
       const videoIdMatch = entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/);
       const titleMatch   = entry.match(/<title>(.*?)<\/title>/);
-      const isLiveMatch  = entry.match(/<media:content[^>]*medium="video"[^>]*\/>/) ||
-                           entry.match(/<media:live[^>]*>true<\/media:live>/);
 
       if (!videoIdMatch || !titleMatch) continue;
 
@@ -80,13 +78,19 @@ async function fetchRssEntries(channelId) {
         .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
         .trim();
 
-      // Detecta live pelos emojis/indicadores no título + campo yt:startTime
+      // Detecta live: 🔴 ou 🔥 no início, [live], LIVE ON, LIVE AGORA, etc.
+      const titleUpper = rawTitle.toUpperCase();
       const liveStartMatch = entry.match(/<yt:startTime>(.*?)<\/yt:startTime>/);
-      const hasLiveEmoji   = /^🔴/.test(rawTitle) || rawTitle.toLowerCase().includes('[live]');
-      const hasStartTime   = !!liveStartMatch;
+      const hasLiveIndicators =
+        /^🔴/.test(rawTitle) ||
+        /^🔥/.test(rawTitle) ||
+        rawTitle.toLowerCase().includes('[live]') ||
+        titleUpper.includes('LIVE ON') ||
+        titleUpper.includes('LIVE AGORA') ||
+        titleUpper.includes('🔴LIVE') ||
+        !!liveStartMatch;
 
-      // Verifica se a live está ativa agora via oEmbed (leve e sem API key)
-      entries.push({ videoId, title: rawTitle, hasLiveEmoji, hasStartTime });
+      entries.push({ videoId, title: rawTitle, hasLiveIndicators });
     }
     return entries;
   } catch (error) {
@@ -95,18 +99,31 @@ async function fetchRssEntries(channelId) {
   }
 }
 
-// Verifica se a live está ativa checando o thumbnail especial do YouTube
-// Enquanto a live está ao vivo, o YouTube serve uma thumbnail diferente via img.youtube.com
+// Verifica se a live está ativa agora checando a página do YouTube
+// Páginas de live Ao Vivo têm <link rel="canonical"> com status diferente
 async function isCurrentlyLive(videoId) {
   try {
-    // A thumbnail maxresdefault só é atualizada em tempo real durante lives ativas
-    // Verificamos via oEmbed: se o tipo for "video" com título contendo 🔴 no RSS = live ativa
+    // Usa oEmbed com cache-busting pra ver se o vídeo existe e é uma live ativa
+    // Lives ativas retornam title com 🔴 e author_name
     const oembedRes = await fetch(
       `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
       { signal: AbortSignal.timeout(8000) }
     );
-    // Se oEmbed falhar = vídeo privado/indisponível
-    return oembedRes.ok;
+    if (!oembedRes.ok) return false;
+
+    // Tenta pegar a página real pra ver se tem o badge "LIVE NOW"
+    const pageRes = await fetch(
+      `https://www.youtube.com/watch?v=${videoId}`,
+      {
+        signal: AbortSignal.timeout(8000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Bot)' },
+      }
+    );
+    if (!pageRes.ok) return false;
+
+    const html = await pageRes.text();
+    // Se tiver "isLive":true no JSON embutido ou badge de live, é live ativa
+    return html.includes('"isLive":true') || html.includes('"isLive":true');
   } catch {
     return false;
   }
@@ -150,8 +167,7 @@ async function checkYouTubeLive(client) {
 
     // Procura live: emoji 🔴 no título (padrão usado por streamers)
     for (const entry of entries) {
-      const isLiveEntry = entry.hasLiveEmoji || entry.hasStartTime;
-      if (!isLiveEntry) continue;
+      if (!entry.hasLiveIndicators) continue;
 
       // Se já notificamos essa live, não reenvia
       if (state.lastLiveId === entry.videoId) return;
@@ -205,7 +221,7 @@ async function checkYouTube(client) {
     const latest = entries[0]; // Primeiro = mais recente
 
     // Pula lives (já tratadas em checkYouTubeLive)
-    if (latest.hasLiveEmoji || latest.hasStartTime) return;
+    if (latest.hasLiveIndicators) return;
 
     if (state.lastVideoId === latest.videoId) return;
 
