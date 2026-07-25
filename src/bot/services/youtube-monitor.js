@@ -99,31 +99,23 @@ async function fetchRssEntries(channelId) {
   }
 }
 
-// Verifica se a live está ativa agora checando a página do YouTube
-// Páginas de live Ao Vivo têm <link rel="canonical"> com status diferente
+// Verifica se a live está no ar: RSS já deu indicador, só confirma se video existe
 async function isCurrentlyLive(videoId) {
   try {
-    // Usa oEmbed com cache-busting pra ver se o vídeo existe e é uma live ativa
-    // Lives ativas retornam title com 🔴 e author_name
+    // Checa thumbnail grande — YouTube só serve thumbnail especial se o video existe
+    const thumbRes = await fetch(
+      `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+      { method: 'HEAD', signal: AbortSignal.timeout(5000) }
+    );
+    // thumb 200 = video existe, 404 = nao existe
+    if (thumbRes.ok) return true;
+
+    // Fallback: oEmbed (mais leve que pagina inteira)
     const oembedRes = await fetch(
       `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-      { signal: AbortSignal.timeout(8000) }
+      { signal: AbortSignal.timeout(5000) }
     );
-    if (!oembedRes.ok) return false;
-
-    // Tenta pegar a página real pra ver se tem o badge "LIVE NOW"
-    const pageRes = await fetch(
-      `https://www.youtube.com/watch?v=${videoId}`,
-      {
-        signal: AbortSignal.timeout(8000),
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Bot)' },
-      }
-    );
-    if (!pageRes.ok) return false;
-
-    const html = await pageRes.text();
-    // Se tiver "isLive":true no JSON embutido ou badge de live, é live ativa
-    return html.includes('"isLive":true') || html.includes('"isLive":true');
+    return oembedRes.ok;
   } catch {
     return false;
   }
