@@ -4,7 +4,8 @@ const {
   TextDisplayBuilder,
   SeparatorBuilder,
   SeparatorSpacingSize,
-  ThumbnailBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -19,6 +20,9 @@ const dataPath = path.join(__dirname, '..', '..', '..', 'data', 'verification.js
 const CORES = {
   padrao: 0xE0242A,
 };
+
+const LOGO_URL =
+  'https://cdn.discordapp.com/attachments/1489797401039474808/1526915242095939685/logo_vk_delas_preto.jpg?ex=6a6a8e62&is=6a693ce2&hm=39239110da364e08367aa61ab79ff6127ef9ee3ad2b4bc28541508de2649a526&';
 
 function getStoredMessageId() {
   try {
@@ -42,27 +46,24 @@ function clearStoredMessageId() {
 }
 
 function buildContainer(guild) {
-  const iconURL = guild.iconURL({ extension: 'png', size: 256 });
-
   const container = new ContainerBuilder().setAccentColor(CORES.padrao);
 
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent('🛡️ **VERIFICAÇÃO DE MEMBROS**'),
+  container.addMediaGalleryComponents(
+    new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL(LOGO_URL),
+    ),
   );
 
   const header = new SectionBuilder().addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `# Bem-vindo(a) ao ${guild.name}!\n\n` +
-      `Clique no botão abaixo para confirmar sua verificação e liberar seu acesso completo ao servidor.`
-    )
+      `# Verificação de Membros\n\n` +
+        `Clique no botão abaixo para confirmar sua verificação e liberar seu acesso ao ${guild.name}.`,
+    ),
   );
-  if (iconURL) {
-    header.setThumbnailAccessory(new ThumbnailBuilder().setURL(iconURL));
-  }
   container.addSectionComponents(header);
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
   );
 
   container.addActionRowComponents(
@@ -70,25 +71,22 @@ function buildContainer(guild) {
       new ButtonBuilder()
         .setCustomId('verificar')
         .setLabel('Concluir Verificação')
-        .setStyle(ButtonStyle.Success)
-        .setEmoji('✅')
-    )
+        .setStyle(ButtonStyle.Success),
+    ),
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
   );
-
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `-# ${guild.name} • Verificação instantânea e necessária apenas uma vez`
-    )
+      `-# ${guild.name} • Verificação instantânea e necessária apenas uma vez`,
+    ),
   );
 
   return container;
 }
-
 
 async function getExistingPainel(channel) {
   const storedId = getStoredMessageId();
