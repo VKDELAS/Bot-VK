@@ -34,7 +34,14 @@ module.exports = {
     if (!interaction.isButton()) return;
     if (interaction.customId !== 'verificar') return;
 
-    await interaction.deferReply({ ephemeral: true });
+    try {
+      await interaction.deferReply({ ephemeral: true });
+    } catch (error) {
+      // Interação expirou antes do bot conseguir responder (ex: cold start,
+      // instabilidade da hospedagem). Não há mais como responder a ela.
+      console.error('[BOT] Falha ao dar defer na interação de verificação (provavelmente expirou):', error.message);
+      return;
+    }
 
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);

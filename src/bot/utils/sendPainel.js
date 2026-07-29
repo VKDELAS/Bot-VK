@@ -17,7 +17,7 @@ const fs = require('node:fs');
 const dataPath = path.join(__dirname, '..', '..', '..', 'data', 'verification.json');
 
 const CORES = {
-  padrao: 0x5865F2,
+  padrao: 0xE0242A,
 };
 
 function getStoredMessageId() {
@@ -53,26 +53,13 @@ function buildContainer(guild) {
   const header = new SectionBuilder().addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `# Bem-vindo(a) ao ${guild.name}!\n\n` +
-      `Para liberar o seu acesso completo aos canais e categorias do servidor, confirme sua verificação clicando no botão abaixo.`
+      `Clique no botão abaixo para confirmar sua verificação e liberar seu acesso completo ao servidor.`
     )
   );
   if (iconURL) {
     header.setThumbnailAccessory(new ThumbnailBuilder().setURL(iconURL));
   }
   container.addSectionComponents(header);
-
-  container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-  );
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      '📋 **Benefícios da Verificação:**\n' +
-      '• **Cargos atribuídos:** Inscrito e Verificado\n' +
-      '• **Acesso liberado:** Canais de bate-papo, lives, notificações e conteúdos exclusivos\n' +
-      '• **Cargo removido:** Não Inscrito'
-    )
-  );
 
   container.addSeparatorComponents(
     new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
