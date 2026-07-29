@@ -4,8 +4,7 @@ const {
   TextDisplayBuilder,
   SeparatorBuilder,
   SeparatorSpacingSize,
-  MediaGalleryBuilder,
-  MediaGalleryItemBuilder,
+  ThumbnailBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -48,18 +47,15 @@ function clearStoredMessageId() {
 function buildContainer(guild) {
   const container = new ContainerBuilder().setAccentColor(CORES.padrao);
 
-  container.addMediaGalleryComponents(
-    new MediaGalleryBuilder().addItems(
-      new MediaGalleryItemBuilder().setURL(LOGO_URL),
-    ),
-  );
+  const header = new SectionBuilder()
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        `# Verificação de Membros\n\n` +
+          `Clique no botão abaixo para confirmar sua verificação e liberar seu acesso ao ${guild.name}.`,
+      ),
+    )
+    .setThumbnailAccessory(new ThumbnailBuilder().setURL(LOGO_URL));
 
-  const header = new SectionBuilder().addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      `# Verificação de Membros\n\n` +
-        `Clique no botão abaixo para confirmar sua verificação e liberar seu acesso ao ${guild.name}.`,
-    ),
-  );
   container.addSectionComponents(header);
 
   container.addSeparatorComponents(
@@ -126,17 +122,23 @@ async function setupPainel(guild) {
 
   const existing = await getExistingPainel(channel);
 
+  // Painel já existe e é igual ao que seria enviado agora: não faz nada.
+  if (existing && !isPainelDiferente(existing, guild)) {
+    return { status: 'unchanged', message: existing };
+  }
+
+  // Só apaga o antigo depois de confirmar que vai conseguir mandar um novo.
+  const nova = await sendPainel(guild);
+
   if (existing) {
     try {
       await existing.delete();
     } catch {
-      // Painel já foi deletado manualmente
+      // Painel antigo já tinha sido apagado manualmente
     }
   }
 
-  clearStoredMessageId();
-  const nova = await sendPainel(guild);
-  return { status: 'sent', message: nova };
+  return { status: existing ? 'updated' : 'sent', message: nova };
 }
 
 module.exports = { sendPainel, getExistingPainel, setupPainel };
