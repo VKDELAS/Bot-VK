@@ -5,6 +5,8 @@ module.exports = {
     logs: process.env.CANAL_LOGS || '1062512395102212106',
     videoNotify: process.env.CANAL_VIDEO_NOTIFY || '1062763623556055080',
     liveNotify: process.env.CANAL_LIVE_NOTIFY || '1062763577846530088',
+    entrada: process.env.CANAL_ENTRADA || '1062763908798095360',
+    saida: process.env.CANAL_SAIDA || '1062512375804203130',
   },
   cargos: {
     admin: process.env.CARGO_ADMIN || '1062512326324011138',
@@ -13,4 +15,3 @@ module.exports = {
     verificado: process.env.CARGO_VERIFICADO || '1062512369017835600',
   },
 };
-
