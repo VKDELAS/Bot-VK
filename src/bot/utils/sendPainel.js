@@ -2,8 +2,6 @@ const {
   ContainerBuilder,
   SectionBuilder,
   TextDisplayBuilder,
-  SeparatorBuilder,
-  SeparatorSpacingSize,
   ThumbnailBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -58,10 +56,6 @@ function buildContainer(guild) {
 
   container.addSectionComponents(header);
 
-  container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
-  );
-
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -69,10 +63,6 @@ function buildContainer(guild) {
         .setLabel('Concluir Verificação')
         .setStyle(ButtonStyle.Success),
     ),
-  );
-
-  container.addSeparatorComponents(
-    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small),
   );
 
   container.addTextDisplayComponents(
