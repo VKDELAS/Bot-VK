@@ -23,7 +23,7 @@ function buildEntradaContainer(member) {
       new TextDisplayBuilder().setContent(
         [
           '# Tropa do VK',
-          `### Chegou mais um pra tropa, ${member}!`,
+          `### Chegou mais um pra somar, ${member}!`,
         ].join('\n'),
       ),
     )
@@ -41,7 +41,7 @@ function buildEntradaContainer(member) {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `-# Agora somos **${member.guild.memberCount}** na tropa`,
+      `-# Agora somos **${member.guild.memberCount}** na familia`,
     ),
   );
 
@@ -60,7 +60,7 @@ function buildSaidaContainer(member) {
       new TextDisplayBuilder().setContent(
         [
           '# Tropa do VK',
-          `### **${member.user.tag}** saiu da tropa`,
+          `### **${member.user.tag}** saiu da familia :(`,
         ].join('\n'),
       ),
     )
